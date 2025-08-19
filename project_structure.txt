@@ -1,0 +1,134 @@
+.
+|____.hintrc
+|____client
+| |____.env
+| |____eslint.config.js
+| |____index.css
+| |____index.html
+| |____node_modules
+| |____package.json
+| |____postcss.config.js
+| |____public
+| | |____static
+| | | |____favicon.ico
+| |____src
+| | |____App.tsx
+| | |____components
+| | | |____Alerts.tsx
+| | | |____Dashboard.tsx
+| | | |____Layout.tsx
+| | | |____Settings.tsx
+| | | |____Transactions.tsx
+| | | |____Users.tsx
+| | |____hooks
+| | | |____useRealTimeData.ts
+| | | |____useWebSocket.ts
+| | |____index.css
+| | |____main.tsx
+| | |____services
+| | | |____api.ts
+| | | |____websocket.ts
+| | |____vite-env.d.ts
+| |____tailwind.config.js
+| |____tsconfig.app.json
+| |____tsconfig.json
+| |____tsconfig.node.json
+| |____vite.config.ts
+|____ml-service
+| |____.env
+| |____app.py
+| |____config
+| | |____settings.py
+| | |______init__.py
+| | |______pycache__
+| | | |____settings.cpython-313.pyc
+| | | |______init__.cpython-313.pyc
+| |____data
+| | |____preprocessor.py
+| | |____sample_data.csv
+| | |______init__.py
+| |____fraud_model.pkl
+| |____logs
+| | |____ml_service.log
+| |____models
+| | |____anomaly_model.pkl
+| | |____fraud_model.pkl
+| | |____fraud_model.py
+| | |____model_trainer.py
+| | |____scaler.pkl
+| | |______init__.py
+| | |______pycache__
+| | | |____fraud_model.cpython-313.pyc
+| | | |______init__.cpython-313.pyc
+| |____requirements.txt
+| |____scaler.pkl
+| |____utils
+| | |____health_checker.py
+| | |____logger.py
+| | |______init__.py
+| | |______pycache__
+| | | |____health_checker.cpython-313.pyc
+| | | |____logger.cpython-313.pyc
+| | | |______init__.cpython-313.pyc
+| |____venv
+|____node_modules
+|____package.json
+|____project_structure.txt
+|____server
+| |____.env
+| |____.env.example
+| |____logs
+| | |____combined.log
+| | |____error.log
+| |____node_modules
+| |____package.json
+| |____src
+| | |____config
+| | | |____authetrack-service-key.json
+| | | |____database.ts
+| | | |____firebase.ts
+| | | |____mlService.ts
+| | | |____queues.ts
+| | | |____redis.ts
+| | | |____swagger.ts
+| | |____controllers
+| | | |____authController.ts
+| | | |____fraudController.ts
+| | | |____riskController.ts
+| | | |____transactionController.ts
+| | |____middleware
+| | | |____authMiddleware.ts
+| | | |____errorMiddleware.ts
+| | | |____rateLimitMiddleware.ts
+| | | |____validationMiddleware.ts
+| | |____routes
+| | | |____adminRoutes.ts
+| | | |____authRoutes.ts
+| | | |____fraudRoutes.ts
+| | | |____integrationRoutes.ts
+| | | |____riskRoutes.ts
+| | | |____transactionRoutes.ts
+| | |____server.ts
+| | |____services
+| | | |____AuthService.ts
+| | | |____FraudAnalysisService.ts
+| | | |____MLService.ts
+| | | |____NotificationService.ts
+| | | |____RiskAssessmentService.ts
+| | | |____types.ts
+| | |____types
+| | | |____index.ts
+| | | |____ml.ts
+| | |____utils
+| | | |____AppError.ts
+| | | |____deviceFingerprint.ts
+| | | |____encryption.ts
+| | | |____logger.ts
+| | | |____response.ts
+| | |____validation
+| | | |____transactionValidation.ts
+| | |____websocket
+| | | |____handlers.ts
+| | | |____socketServer.ts
+| |____test-env.js
+| |____tsconfig.json
