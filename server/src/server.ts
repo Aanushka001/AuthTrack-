@@ -1,33 +1,33 @@
-// // // C:\Users\aanus\Downloads\AutheTrack\AutheTrack\server\src\server.ts
-// // import dotenv from 'dotenv';
+import dotenv from 'dotenv';
+import path from 'path';
 
-// // // Load environment variables first
-// // dotenv.config();
+// Load environment variables from root .env file
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-// // import express from 'express';
-// // import cors from 'cors';
-// // import helmet from 'helmet';
-// // import rateLimit from 'express-rate-limit';
-// // import { createServer } from 'http';
-// // import { Server as SocketIOServer } from 'socket.io';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 
-// // import { initializeDatabase } from './config/database';
-// // import { initializeRedis } from './config/redis';
-// // import { initializeQueues } from './config/queues';
-// // import { setupSwagger } from './config/swagger';
-// // import { errorHandler } from './middleware/errorMiddleware';
-// // import { logger } from './utils/logger';
-// // import { initializeSocketServer } from './websocket/socketServer';
+import { initializeDatabase } from './config/database';
+import { initializeRedis } from './config/redis';
+import { initializeQueues } from './config/queues';
+import { setupSwagger } from './config/swagger';
+import { errorHandler } from './middleware/errorMiddleware';
+import { logger } from './utils/logger';
+import { initializeSocketServer } from './websocket/socketServer';
 
-// // import authRoutes from './routes/authRoutes';
-// // import transactionRoutes from './routes/transactionRoutes';
-// // import riskRoutes from './routes/riskRoutes';
-// // import fraudRoutes from './routes/fraudRoutes';
-// // import adminRoutes from './routes/adminRoutes';
-// // import integrationRoutes from './routes/integrationRoutes';
+import authRoutes from './routes/authRoutes';
+import transactionRoutes from './routes/transactionRoutes';
+import riskRoutes from './routes/riskRoutes';
+import fraudRoutes from './routes/fraudRoutes';
+import adminRoutes from './routes/adminRoutes';
+import integrationRoutes from './routes/integrationRoutes';
 
-// // const app = express();
-// // const server = createServer(app);
+const app = express();
+const server = createServer(app);
 // // const io = new SocketIOServer(server, {
 // //   cors: {
 // //     origin: process.env.CORS_ORIGIN || "http://localhost:3000",
