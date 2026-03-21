@@ -1,32 +1,40 @@
 # ./ml-service/config/settings.py
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from root .env file
+root_env_path = Path(__file__).parent.parent.parent / '.env'
+load_dotenv(dotenv_path=str(root_env_path))
 
 class Config:
     """Configuration class for ML service"""
     
     # Flask Configuration
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
-    FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    FLASK_DEBUG = os.getenv('FLASK_ENV', 'development') == 'development'
     HOST = os.getenv('HOST', 'localhost')
-    PORT = int(os.getenv('PORT', 5001))
+    PORT = int(os.getenv('ML_SERVICE_PORT', 5000))
     
     # API Configuration
     API_KEY = os.getenv('API_KEY', '89a6f454a6455c2a9cc85cee4eda59fe61599c632996e8d23300b63ae3efd97d')
     API_VERSION = os.getenv('API_VERSION', '1.0')
+    REQUIRE_AUTH = os.getenv('REQUIRE_AUTH', 'false').lower() == 'true'
     RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', 100))
     
     # Model Configuration
     MODEL_NAME = os.getenv('MODEL_NAME', 'fraud-detection-v1')
     MODEL_VERSION = os.getenv('MODEL_VERSION', '1.0.0')
-    MODEL_PATH = os.getenv('MODEL_PATH', './models/trained_model.pkl')
-    SCALER_PATH = os.getenv('SCALER_PATH', './models/scaler.pkl')
+    MODEL_PATH = os.getenv('MODEL_PATH', './models/')
+    FRAUD_MODEL_PATH = os.path.join(MODEL_PATH, 'fraud_model.pkl')
+    ANOMALY_MODEL_PATH = os.path.join(MODEL_PATH, 'anomaly_model.pkl')
+    SCALER_PATH = os.path.join(MODEL_PATH, 'scaler.pkl')
     RETRAIN_THRESHOLD_DAYS = int(os.getenv('RETRAIN_THRESHOLD_DAYS', 7))
     MIN_TRAINING_SAMPLES = int(os.getenv('MIN_TRAINING_SAMPLES', 1000))
+    
+    # Logging Configuration
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     
     # Performance Thresholds
     ACCURACY_THRESHOLD = float(os.getenv('ACCURACY_THRESHOLD', 0.80))

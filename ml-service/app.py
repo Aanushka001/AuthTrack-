@@ -1,53 +1,58 @@
+import os
+import logging
+import pickle
+import traceback
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from pathlib import Path
 
-# # C:\Users\aanus\Downloads\AutheTrack\AutheTrack\ml-service\app.py
+from dotenv import load_dotenv
 
+# Load environment variables from root .env file
+root_env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=str(root_env_path))
 
-# import os
-# import logging
-# import pickle
-# import traceback
-# from datetime import datetime, timedelta
-# from typing import Dict, List, Any, Optional
+import numpy as np
+import pandas as pd
+from flask import Flask, jsonify, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_cors import CORS
+from sklearn.ensemble import RandomForestClassifier, IsolationForest
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, roc_auc_score, classification_report
+)
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import joblib
 
-# import numpy as np
-# import pandas as pd
-# from flask import Flask, jsonify, request
-# from flask_limiter import Limiter
-# from flask_limiter.util import get_remote_address
-# from flask_cors import CORS
-# from sklearn.ensemble import RandomForestClassifier, IsolationForest
-# from sklearn.model_selection import train_test_split
-# from sklearn.preprocessing import StandardScaler, LabelEncoder
-# from sklearn.metrics import (
-#     accuracy_score, precision_score, recall_score,
-#     f1_score, roc_auc_score, classification_report
-# )
-# from sklearn.compose import ColumnTransformer
-# from sklearn.pipeline import Pipeline
-# import joblib
-
-# # ================= CONFIGURATION =================
-# class Config:
-#     MODEL_PATH = "models/fraud_model.pkl"
-#     ANOMALY_PATH = "models/anomaly_model.pkl"
-#     SCALER_PATH = "models/scaler.pkl"
-#     RATE_LIMIT = "100 per minute"
-#     PORT = 5001
-#     DEBUG = True
+# ================= CONFIGURATION =================
+class Config:
+    MODEL_PATH = os.getenv("MODEL_PATH", "./models/")
+    FRAUD_MODEL = os.path.join(MODEL_PATH, "fraud_model.pkl")
+    ANOMALY_MODEL = os.path.join(MODEL_PATH, "anomaly_model.pkl")
+    SCALER_PATH = os.path.join(MODEL_PATH, "scaler.pkl")
     
-#     # Model parameters
-#     FRAUD_THRESHOLD = 0.5
-#     ANOMALY_THRESHOLD = -0.1
-#     MIN_TRAINING_SAMPLES = 1000
-#     RETRAIN_INTERVAL_HOURS = 24
+    RATE_LIMIT = os.getenv("RATE_LIMIT", "100 per minute")
+    PORT = int(os.getenv("ML_SERVICE_PORT", 5000))
+    DEBUG = os.getenv("FLASK_ENV", "development") == "development"
     
-#     # API Key for authentication (Optional - can be disabled for development)
-#     API_KEY = os.getenv("ML_API_KEY", "89a6f454a6455c2a9cc85cee4eda59fe61599c632996e8d23300b63ae3efd97d")
-#     REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
+    # Model parameters
+    FRAUD_THRESHOLD = 0.5
+    ANOMALY_THRESHOLD = -0.1
+    MIN_TRAINING_SAMPLES = 1000
+    RETRAIN_INTERVAL_HOURS = 24
+    
+    # API Key for authentication
+    API_KEY = os.getenv("API_KEY", "89a6f454a6455c2a9cc85cee4eda59fe61599c632996e8d23300b63ae3efd97d")
+    REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
 
-# # ================= LOGGING SETUP =================
-# os.makedirs("logs", exist_ok=True)
-# os.makedirs("models", exist_ok=True)
+# ================= LOGGING SETUP =================
+os.makedirs("logs", exist_ok=True)
+os.makedirs(Config.MODEL_PATH, exist_ok=True)
 
 # logging.basicConfig(
 #     level=logging.INFO,
