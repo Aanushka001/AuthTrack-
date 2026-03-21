@@ -56,7 +56,7 @@ class DataPreprocessor:
         # Encode categorical features
         for col in self.categorical_features:
             le = LabelEncoder()
-            data.loc[:, col] = le.fit_transform(data[col].astype(str))
+            data.loc[:, col] = le.fit_transform(data[col].astype(str)) # type: ignore
             self.label_encoders[col] = le
         
         # Scale numerical features
@@ -81,7 +81,7 @@ class DataPreprocessor:
         # Encode categorical features
         for col in self.categorical_features:
             if col in data.columns and col in self.label_encoders:
-                data.loc[:, col] = self.label_encoders[col].transform(
+                data.loc[:, col] = self.label_encoders[col].transform( # type: ignore
                     data[col].astype(str)
                 )
         
