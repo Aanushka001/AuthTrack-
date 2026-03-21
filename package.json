@@ -1,5 +1,19 @@
 {
+  "name": "authetrack",
+  "version": "1.0.0",
+  "description": "Behavioral fraud detection platform with real-time analytics",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"CLIENT,SERVER,ML\" --prefix-colors \"blue,magenta,yellow\" \"npm run dev --prefix client\" \"npm run dev --prefix server\" \"npm run start --prefix ml-service\"",
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server && cd ml-service && pip install -r requirements.txt",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "lint": "npm run lint --prefix client && npm run lint --prefix server",
+    "start": "concurrently --names \"SERVER,ML\" --prefix-colors \"magenta,yellow\" \"npm start --prefix server\" \"npm run start --prefix ml-service\""
+  },
   "dependencies": {
     "firebase-admin": "^13.4.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
   }
 }
