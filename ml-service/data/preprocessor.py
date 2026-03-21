@@ -60,8 +60,10 @@ class DataPreprocessor:
             self.label_encoders[col] = le
         
         # Scale numerical features
-        data.loc[:, self.numerical_features] = self.scaler.fit_transform(
-            data[self.numerical_features]
+        data.loc[:, self.numerical_features] = pd.DataFrame(
+            self.scaler.fit_transform(data[self.numerical_features]),
+            columns=self.numerical_features,
+            index=data.index
         )
         
         return data[self.feature_names].values
@@ -85,8 +87,10 @@ class DataPreprocessor:
         
         # Scale numerical features
         if self.numerical_features:
-            data.loc[:, self.numerical_features] = self.scaler.transform(
-                data[self.numerical_features]
+            data.loc[:, self.numerical_features] = pd.DataFrame(
+                self.scaler.transform(data[self.numerical_features]),
+                columns=self.numerical_features,
+                index=data.index
             )
         
         return data[self.feature_names].values
