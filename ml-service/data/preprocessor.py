@@ -56,11 +56,11 @@ class DataPreprocessor:
         # Encode categorical features
         for col in self.categorical_features:
             le = LabelEncoder()
-            data[col] = le.fit_transform(data[col].astype(str))
+            data.loc[:, col] = le.fit_transform(data[col].astype(str))
             self.label_encoders[col] = le
         
         # Scale numerical features
-        data[self.numerical_features] = self.scaler.fit_transform(
+        data.loc[:, self.numerical_features] = self.scaler.fit_transform(
             data[self.numerical_features]
         )
         
@@ -79,13 +79,13 @@ class DataPreprocessor:
         # Encode categorical features
         for col in self.categorical_features:
             if col in data.columns and col in self.label_encoders:
-                data[col] = self.label_encoders[col].transform(
+                data.loc[:, col] = self.label_encoders[col].transform(
                     data[col].astype(str)
                 )
         
         # Scale numerical features
         if self.numerical_features:
-            data[self.numerical_features] = self.scaler.transform(
+            data.loc[:, self.numerical_features] = self.scaler.transform(
                 data[self.numerical_features]
             )
         
@@ -106,7 +106,7 @@ class DataPreprocessor:
         """
         features = {
             'amount': transaction.get('amount', 0),
-            'timestamp': pd.Timestamp(transaction.get('timestamp')),
+            'timestamp': pd.Timestamp(transaction.get('timestamp') or pd.Timestamp.now()),
             'device_id': transaction.get('device_id', ''),
             'user_id': transaction.get('user_id', ''),
             'merchant_id': transaction.get('merchant_id', ''),
