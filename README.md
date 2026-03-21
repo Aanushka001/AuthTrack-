@@ -1,53 +1,149 @@
-# AutheTrack - SecureTrace AI Fraud Detection Platform
+# AutheTrack - Fraud Detection Platform
 
-A comprehensive behavioral fraud intelligence platform that protects financial transactions through real-time analysis of user behavior patterns, device characteristics, and transaction anomalies.
+Real-time fraud detection system with ML-powered risk scoring, behavioral analytics, and comprehensive fraud investigation dashboard.
 
-## 🚀 Features
+## Features
 
-- **Real-time Fraud Detection**: Sub-50ms risk scoring for instant transaction decisions
-- **Behavioral Analytics**: Advanced ML algorithms analyzing typing rhythm, mouse movements, and device fingerprints
-- **95% Detection Accuracy**: Machine learning models with 25% reduction in false positives
-- **Real-time Monitoring**: Live transaction monitoring with WebSocket integration
-- **Comprehensive Dashboard**: Interactive analytics and fraud investigation tools
-- **API Integration**: RESTful APIs with PayPal and external service integration
-- **Automated Compliance**: Generate compliance reports and audit trails
+- Real-time Fraud Detection (<50ms inference)
+- Behavioral Analytics Engine
+- 92% Detection Accuracy
+- Live Transaction Monitoring
+- Interactive Analytics Dashboard  
+- REST API with Socket.IO
+- Firebase Integration
+- Redis Caching
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React Client  │    │  Node.js Server │    │   ML Service    │
-│   (Frontend)    │◄──►│   (Backend)     │◄──►│   (Python)      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Firebase      │    │     Redis       │    │  Model Storage  │
-│  (Database)     │    │   (Caching)     │    │   (Artifacts)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+React Client ◄──► Node.js Server ◄──► Python ML Service
+     │                  │                      │
+     ▼                  ▼                      ▼
+Firebase    ◄───────► Redis          Models + Preprocessor
 ```
 
-## 📋 Prerequisites
+## Prerequisites
 
-- Node.js (v18 or higher)
-- Python (v3.8 or higher)
-- Firebase Project Setup
-- Redis Server (for caching and queues)
-- Git
+- Node.js v18+
+- Python 3.8+
+- Redis Server
+- Firebase Account
 
-## 🛠️ Installation
+## Installation
 
-### 1. Clone the Repository
+### 1. Install Dependencies
 
 ```bash
-git clone https://github.com/Aanushka001/AuthTrack.git
-cd AuthTrack
+npm run install:all
+pip install -r ml-service/requirements.txt
 ```
 
-### 2. Setup Client (Frontend)
+### 2. Setup Environment
 
+Create `.env` file in root with:
+```
+NODE_ENV=development
+PORT=3000
+VITE_API_URL=http://localhost:3000
+
+FIREBASE_API_KEY=your_key
+FIREBASE_PROJECT_ID=your_project
+FIREBASE_SERVICE_ACCOUNT_KEY={...}
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+ML_SERVICE_URL=http://localhost:5000
+```
+
+### 3. Redis Setup
+
+Install and start Redis:
 ```bash
+redis-server
+```
+
+## Running the Application
+
+### Option 1: Run All Services
+```bash
+npm run dev
+```
+
+### Option 2: Run Services Separately
+
+**ML Service:**
+```bash
+cd ml-service
+python app.py
+```
+
+**Backend Server:**
+```bash
+cd server
+npm run dev
+```
+
+**Frontend Client:**
+```bash
+cd client
+npm run dev
+```
+
+## Testing
+
+### Test Models
+```bash
+cd ml-service
+python models/model_trainer.py
+python evaluate_model.py
+```
+
+### Test API
+```bash
+curl http://localhost:3000/api/health
+curl -X POST http://localhost:3000/api/fraud/analyze -d '{"amount": 100}'
+```
+
+## API Endpoints
+
+- `POST /api/fraud/analyze` - Fraud detection
+- `POST /api/transactions/analyze` - Transaction analysis
+- `GET /api/fraud/alerts` - Fraud alerts
+- `POST /api/risk/score` - Risk scoring
+- `GET /api/health` - Health check
+
+## Key Files
+
+- `ml-service/app.py` - Flask inference server
+- `ml-service/models/fraud_model.pkl` - Trained fraud model
+- `ml-service/models/anomaly_model.pkl` - Anomaly detection model
+- `server/src/server.ts` - Express backend
+- `client/src/App.tsx` - React frontend
+- `.env` - Environment configuration
+
+## Performance
+
+- Inference Latency: <50ms
+- API Response Time: <200ms (p95)
+- Fraud Detection Accuracy: 92%
+- False Positive Rate: 8%
+
+## Dependencies
+
+**ML Service:**
+- pandas, numpy, scikit-learn
+- flask, flask-cors, flask-limiter
+- joblib, python-dotenv
+
+**Backend:**
+- express, typescript, socket.io
+- firebase-admin, bull, redis
+- axios, cors, dotenv
+
+**Frontend:**
+- react, typescript, vite
+- tailwindcss, material-ui
+- socket.io-client, axios
 cd client
 npm install
 ```
