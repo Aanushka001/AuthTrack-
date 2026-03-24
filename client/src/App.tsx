@@ -1,109 +1,228 @@
-// import React, { useState, createContext, useContext } from 'react'
-// import Layout from './components/Layout'
-// import Dashboard from './components/Dashboard'
-// import Transactions from './components/Transactions'
-// import Users from './components/Users'
-// import Alerts from './components/Alerts'
-// import Settings from './components/Settings'
-// import { useRealTimeData, type RealTimeData } from './hooks/useRealTimeData'
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-// type View = 'dashboard' | 'transactions' | 'users' | 'alerts' | 'settings'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// // Create context for real-time data
-// const RealTimeDataContext = createContext<RealTimeData | null>(null)
+export interface Transaction {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  location: string;
+  device: string;
+  timestamp: string;
+  riskScore: number;
+  status: 'approved' | 'declined' | 'pending';
+  fraudPrediction: boolean;
+  flags: string[];
+}
 
-// // Custom hook to use real-time data context
-// export const useRealTimeDataContext = () => {
-//   const context = useContext(RealTimeDataContext)
-//   if (!context) {
-//     throw new Error('useRealTimeDataContext must be used within RealTimeDataProvider')
-//   }
-//   return context
-// }
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  accountType: string;
+  location: string;
+  registrationDate: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  transactionCount: number;
+  averageAmount: number;
+}
 
-// const App: React.FC = () => {
-//   const [currentView, setCurrentView] = useState<View>('dashboard')
-//   const realTimeData = useRealTimeData()
+export interface Alert {
+  id: string;
+  type: 'fraud' | 'security' | 'system';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  timestamp: string;
+  userId?: string;
+  transactionId?: string;
+  status: 'new' | 'investigating' | 'resolved';
+}
 
-//   const renderView = () => {
-//     switch (currentView) {
-//       case 'dashboard':
-//         return <Dashboard />
-//       case 'transactions':
-//         return <Transactions />
-//       case 'users':
-//         return <Users />
-//       case 'alerts':
-//         return <Alerts />
-//       case 'settings':
-//         return <Settings />
-//       default:
-//         return <Dashboard />
-//     }
-//   }
-// return (
-//   <RealTimeDataContext.Provider value={realTimeData}>
-//    <Layout
-//   activeTab={currentView}
-//   onTabChange={(tab) => setCurrentView(tab as View)}
-// >
-//   {renderView()}
-// </Layout>
+export interface DashboardData {
+  totalTransactions: number;
+  fraudDetected: number;
+  falsePositives: number;
+  accuracy: number;
+  recentTransactions: Transaction[];
+  alerts: Alert[];
+  riskDistribution: { level: string; count: number }[];
+}
 
-//   </RealTimeDataContext.Provider>
-// )
+export interface MLFeatures {
+  amount: number;
+  hourOfDay: number;
+  dayOfWeek: number;
+  merchantRiskScore: number;
+  accountAge: number;
+  transactionCount1h: number;
+  transactionCount24h: number;
+  avgTransactionAmount: number;
+  locationRiskScore: number;
+  deviceRiskScore: number;
+  timeSinceLastTransaction: number;
+  paymentMethod: string;
+  ipReputationScore: number;
+  behavioralAnomalyScore: number;
+  crossBorderTransaction: boolean;
+}
 
-// }
+class ApiService {
+  private client: AxiosInstance;
 
-// export default App
+  constructor() {
+    this.client = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
+    this.client.interceptors.request.use((config) => {
+      const token = localStorage.getItem('authToken');
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    });
 
-// C:\Users\aanus\Downloads\AutheTrack\AutheTrack\client\src\App.tsx
-import React, { useState, createContext } from 'react';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import Transactions from './components/Transactions';
-import Users from './components/Users';
-import Alerts from './components/Alerts';
-import Settings from './components/Settings';
-import { useRealTimeData, type RealTimeData } from './hooks/useRealTimeData';
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          localStorage.removeItem('authToken');
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
 
-type View = 'dashboard' | 'transactions' | 'users' | 'alerts' | 'settings';
+  private async request<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
+    const response = await this.client.request({ url: endpoint, ...options });
+    return response.data;
+  }
 
-// Create context for real-time data
-const RealTimeDataContext = createContext<RealTimeData | null>(null);
+  async getDashboardData(): Promise<DashboardData> {
+    return this.request<DashboardData>('/transactions/dashboard');
+  }
 
-const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
-  const realTimeData = useRealTimeData();
+  async getTransactions(page = 1, limit = 10) {
+    return this.request<{ transactions: Transaction[]; total: number }>(
+      `/transactions?page=${page}&limit=${limit}`
+    );
+  }
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'transactions':
-        return <Transactions />;
-      case 'users':
-        return <Users />;
-      case 'alerts':
-        return <Alerts />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
-  };
+  async getTransaction(id: string) {
+    return this.request<Transaction>(`/transactions/${id}`);
+  }
 
-  return (
-    <RealTimeDataContext.Provider value={realTimeData}>
-      <Layout
-        activeTab={currentView}
-        onTabChange={(tab) => setCurrentView(tab as View)}
-      >
-        {renderView()}
-      </Layout>
-    </RealTimeDataContext.Provider>
-  );
-};
+  async analyzeTransaction(transactionData: Partial<Transaction>) {
+    return this.request<{ riskScore: number; fraudPrediction: boolean; flags: string[] }>(
+      '/fraud/analyze',
+      { method: 'POST', data: transactionData }
+    );
+  }
 
-export default App;
+  async analyzeFraudRisk(features: MLFeatures) {
+    return this.request<{
+      riskScore: number;
+      fraudPrediction: boolean;
+      confidence: number;
+      explanation: { riskFactors: string[]; featureImportance: Record<string, number> };
+    }>('/fraud/analyze', { method: 'POST', data: { features } });
+  }
+
+  async getUsers(page = 1, limit = 10) {
+    return this.request<{ users: User[]; total: number }>(
+      `/auth/users?page=${page}&limit=${limit}`
+    );
+  }
+
+  async getUser(id: string) {
+    return this.request<User>(`/auth/users/${id}`);
+  }
+
+  async getUserRiskProfile(id: string) {
+    return this.request<{ riskLevel: string; factors: string[]; recommendations: string[] }>(
+      `/risk/user/${id}`
+    );
+  }
+
+  async getAlerts(page = 1, limit = 10) {
+    return this.request<{ alerts: Alert[]; total: number }>(
+      `/fraud/alerts?page=${page}&limit=${limit}`
+    );
+  }
+
+  async updateAlertStatus(id: string, status: Alert['status']) {
+    return this.request<Alert>(`/fraud/alerts/${id}`, { method: 'PATCH', data: { status } });
+  }
+
+  async getSystemHealth() {
+    return this.request<{
+      status: string;
+      uptime: number;
+      performance: object;
+      mlService?: { status: string; isHealthy: boolean; modelVersion: string };
+    }>('/admin/health');
+  }
+
+  async updateSettings(settings: object) {
+    return this.request<{ success: boolean }>('/admin/settings', { method: 'PUT', data: settings });
+  }
+
+  async trainMLModel() {
+    return this.request<{
+      status: string;
+      message: string;
+      metrics?: { accuracy: number; precision: number; recall: number };
+    }>('/admin/ml/train', { method: 'POST' });
+  }
+
+  async getMLModelStatus() {
+    return this.request<{
+      modelLoaded: boolean;
+      modelVersion: string;
+      lastTraining: string | null;
+      performanceMetrics: object;
+    }>('/admin/ml/status');
+  }
+
+  async login(email: string, password: string) {
+    return this.request<{ token: string; user: User }>('/auth/login', {
+      method: 'POST',
+      data: { email, password },
+    });
+  }
+
+  async register(userData: { email: string; password: string; name: string }) {
+    return this.request<{ token: string; user: User }>('/auth/register', {
+      method: 'POST',
+      data: userData,
+    });
+  }
+
+  async logout() {
+    return this.request<{ success: boolean }>('/auth/logout', { method: 'POST' });
+  }
+
+  async verifyPayPalTransaction(transactionId: string) {
+    return this.request<{ verified: boolean; details: object }>('/integrations/paypal/verify', {
+      method: 'POST',
+      data: { transactionId },
+    });
+  }
+
+  async getDeviceFingerprint(fingerprintHash: string) {
+    return this.request<{ deviceInfo: object; riskScore: number }>(
+      `/integrations/device/${fingerprintHash}`
+    );
+  }
+
+  async analyzeGeolocation(ipAddress: string) {
+    return this.request<{ location: object; riskScore: number }>(
+      '/integrations/geolocation/analyze',
+      { method: 'POST', data: { ipAddress } }
+    );
+  }
+}
+
+export const apiService = new ApiService();
+export default apiService;
