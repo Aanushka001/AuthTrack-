@@ -1,4 +1,4 @@
-numpy>=2.0.0
+numpy>=1.26.0,<2.0.0
 pandas>=2.1.0
 scikit-learn>=1.3.0
 flask>=3.0.0
@@ -7,11 +7,11 @@ flask-limiter>=3.5.0
 joblib>=1.3.0
 python-dotenv>=1.0.0
 scipy>=1.11.0
-cryptography==41.0.8
-requests==2.31.0
-gunicorn==21.2.0
-psutil==5.9.5
+cryptography>=42.0.0
+requests>=2.31.0
+gunicorn>=21.2.0
+psutil>=5.9.5
 
 # Development and Testing
-pytest==7.4.0
-pytest-flask==1.2.0
+pytest>=7.4.0
+pytest-flask>=1.2.0

@@ -34,3 +34,12 @@ ml-service/*.pkl
 *.sln
 *.sw?
 project_structure.txt
+
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
