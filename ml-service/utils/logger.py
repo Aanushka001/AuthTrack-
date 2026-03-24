@@ -1,19 +1,14 @@
+from typing import Optional
 import logging
 import os
 
-
-def setup_logger(name: str, level: str = "INFO", log_file: str = None) -> logging.Logger:
-    """Setup logger with console and optional file handler."""
+def setup_logger(name: str, level: str = "INFO", log_file: Optional[str] = None) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
-
     if logger.handlers:
         return logger
 
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(getattr(logging, level.upper()))
