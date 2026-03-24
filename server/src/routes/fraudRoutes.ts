@@ -1,25 +1,6 @@
-// // C:\Users\aanus\Downloads\AutheTrack\AutheTrack\server\src\routes\fraudRoutes.ts
-// import { Router, Request, Response } from "express";
-
-// const router = Router();
-
-// // Report suspected fraud
-// router.post("/report", (req: Request, res: Response) => {
-//   const { transactionId, reason } = req.body;
-//   res.json({ message: "Fraud reported successfully", transactionId, reason });
-// });
-
-// // List fraud cases
-// router.get("/cases", (req: Request, res: Response) => {
-//   res.json([
-//     { id: 1, transactionId: "TXN001", status: "Investigating" },
-//     { id: 2, transactionId: "TXN002", status: "Confirmed Fraud" },
-//   ]);
-// });
-
-// export default router;
-import { Router, Request, Response } from "express";
+import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -39,7 +20,7 @@ const fraudCases: Array<{
     status: 'Investigating',
     reason: 'Suspicious payment pattern',
     reportedAt: new Date().toISOString(),
-    severity: 'high'
+    severity: 'high',
   },
   {
     id: '2',
@@ -47,42 +28,33 @@ const fraudCases: Array<{
     status: 'Confirmed Fraud',
     reason: 'Unauthorized transaction',
     reportedAt: new Date().toISOString(),
-    severity: 'critical'
-  }
+    severity: 'critical',
+  },
 ];
 
-router.post("/report", (req: Request, res: Response) => {
+const meta = (req: Request) => ({
+  timestamp: new Date().toISOString(),
+  requestId: (req.headers['x-request-id'] as string) || uuidv4(),
+  version: 'v1',
+});
+
+router.post('/report', (req: Request, res: Response) => {
   try {
     const { transactionId, reason, severity = 'medium', description } = req.body;
 
     if (!transactionId || !reason) {
       return res.status(400).json({
         success: false,
-        error: {
-          code: 'MISSING_REQUIRED_FIELDS',
-          message: 'Transaction ID and reason are required'
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
+        error: { code: 'MISSING_REQUIRED_FIELDS', message: 'Transaction ID and reason are required' },
+        meta: meta(req),
       });
     }
 
-    const existingCase = fraudCases.find(c => c.transactionId === transactionId);
-    if (existingCase) {
+    if (fraudCases.find((c) => c.transactionId === transactionId)) {
       return res.status(409).json({
         success: false,
-        error: {
-          code: 'CASE_ALREADY_EXISTS',
-          message: 'Fraud case already exists for this transaction'
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
+        error: { code: 'CASE_ALREADY_EXISTS', message: 'Fraud case already exists for this transaction' },
+        meta: meta(req),
       });
     }
 
@@ -94,87 +66,42 @@ router.post("/report", (req: Request, res: Response) => {
       severity,
       reportedAt: new Date().toISOString(),
       reportedBy: (req as any).user?.id || 'anonymous',
-      investigationNotes: description || ''
+      investigationNotes: description || '',
     };
 
     fraudCases.push(newCase);
 
-    return res.status(201).json({
-      success: true,
-      data: {
-        caseId: newCase.id,
-        transactionId,
-        status: newCase.status,
-        reason,
-        severity,
-        reportedAt: newCase.reportedAt
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
+    return res.status(201).json({ success: true, data: newCase, meta: meta(req) });
   } catch (error) {
-    console.error('Fraud report error:', error);
+    logger.error('Fraud report error:', error);
     return res.status(500).json({
       success: false,
-      error: {
-        code: 'REPORT_FAILED',
-        message: 'Failed to report fraud case'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      error: { code: 'REPORT_FAILED', message: 'Failed to report fraud case' },
+      meta: meta(req),
     });
   }
 });
 
-router.get("/cases", (req: Request, res: Response) => {
+router.get('/cases', (req: Request, res: Response) => {
   try {
-    const {
-      status,
-      severity,
-      page = 1,
-      limit = 20,
-      sortBy = 'reportedAt',
-      sortOrder = 'desc'
-    } = req.query;
+    const { status, severity, page = 1, limit = 20, sortBy = 'reportedAt', sortOrder = 'desc' } = req.query;
 
-    let filteredCases = [...fraudCases];
+    let filtered = [...fraudCases];
 
-    if (status) {
-      filteredCases = filteredCases.filter(c => 
-        c.status.toLowerCase() === (status as string).toLowerCase()
-      );
-    }
+    if (status) filtered = filtered.filter((c) => c.status.toLowerCase() === (status as string).toLowerCase());
+    if (severity) filtered = filtered.filter((c) => c.severity === severity);
 
-    if (severity) {
-      filteredCases = filteredCases.filter(c => 
-        c.severity === severity
-      );
-    }
-
-    filteredCases.sort((a, b) => {
-      const aValue = (a as any)[sortBy as string];
-      const bValue = (b as any)[sortBy as string];
-      
-      if (sortOrder === 'desc') {
-        return bValue > aValue ? 1 : -1;
-      }
-      return aValue > bValue ? 1 : -1;
+    filtered.sort((a, b) => {
+      const av = (a as any)[sortBy as string];
+      const bv = (b as any)[sortBy as string];
+      return sortOrder === 'desc' ? (bv > av ? 1 : -1) : av > bv ? 1 : -1;
     });
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const startIndex = (pageNum - 1) * limitNum;
-    const endIndex = startIndex + limitNum;
-
-    const paginatedCases = filteredCases.slice(startIndex, endIndex);
-    const totalCases = filteredCases.length;
-    const totalPages = Math.ceil(totalCases / limitNum);
+    const paginatedCases = filtered.slice(startIndex, startIndex + limitNum);
+    const totalPages = Math.ceil(filtered.length / limitNum);
 
     return res.json({
       success: true,
@@ -183,255 +110,93 @@ router.get("/cases", (req: Request, res: Response) => {
         pagination: {
           page: pageNum,
           limit: limitNum,
-          total: totalCases,
+          total: filtered.length,
           pages: totalPages,
           hasNext: pageNum < totalPages,
-          hasPrev: pageNum > 1
-        }
+          hasPrev: pageNum > 1,
+        },
       },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      meta: meta(req),
     });
   } catch (error) {
-    console.error('Get fraud cases error:', error);
+    logger.error('Get fraud cases error:', error);
     return res.status(500).json({
       success: false,
-      error: {
-        code: 'FETCH_FAILED',
-        message: 'Failed to retrieve fraud cases'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      error: { code: 'FETCH_FAILED', message: 'Failed to retrieve fraud cases' },
+      meta: meta(req),
     });
   }
 });
 
-router.get("/cases/:id", (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const fraudCase = fraudCases.find(c => c.id === id);
-    if (!fraudCase) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'CASE_NOT_FOUND',
-          message: 'Fraud case not found'
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: fraudCase,
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
-  } catch (error) {
-    console.error('Get fraud case error:', error);
-    return res.status(500).json({
+router.get('/cases/:id', (req: Request, res: Response) => {
+  const fraudCase = fraudCases.find((c) => c.id === req.params.id);
+  if (!fraudCase) {
+    return res.status(404).json({
       success: false,
-      error: {
-        code: 'FETCH_FAILED',
-        message: 'Failed to retrieve fraud case'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      error: { code: 'CASE_NOT_FOUND', message: 'Fraud case not found' },
+      meta: meta(req),
     });
   }
+  return res.json({ success: true, data: fraudCase, meta: meta(req) });
 });
 
-router.put("/cases/:id/status", (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status, notes } = req.body;
+router.put('/cases/:id/status', (req: Request, res: Response) => {
+  const validStatuses = ['Reported', 'Investigating', 'Confirmed Fraud', 'False Positive', 'Resolved'];
+  const { status, notes } = req.body;
 
-    const validStatuses = ['Reported', 'Investigating', 'Confirmed Fraud', 'False Positive', 'Resolved'];
-    
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_STATUS',
-          message: `Status must be one of: ${validStatuses.join(', ')}`
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
-      });
-    }
-
-    const caseIndex = fraudCases.findIndex(c => c.id === id);
-    if (caseIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'CASE_NOT_FOUND',
-          message: 'Fraud case not found'
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
-      });
-    }
-
-    fraudCases[caseIndex] = {
-      ...fraudCases[caseIndex],
-      status,
-      investigationNotes: notes || fraudCases[caseIndex].investigationNotes
-    };
-
-    return res.json({
-      success: true,
-      data: fraudCases[caseIndex],
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
-  } catch (error) {
-    console.error('Update fraud case status error:', error);
-    return res.status(500).json({
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({
       success: false,
-      error: {
-        code: 'UPDATE_FAILED',
-        message: 'Failed to update fraud case status'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      error: { code: 'INVALID_STATUS', message: `Status must be one of: ${validStatuses.join(', ')}` },
+      meta: meta(req),
     });
   }
+
+  const idx = fraudCases.findIndex((c) => c.id === req.params.id);
+  if (idx === -1) {
+    return res.status(404).json({
+      success: false,
+      error: { code: 'CASE_NOT_FOUND', message: 'Fraud case not found' },
+      meta: meta(req),
+    });
+  }
+
+  fraudCases[idx] = { ...fraudCases[idx], status, investigationNotes: notes || fraudCases[idx].investigationNotes };
+  return res.json({ success: true, data: fraudCases[idx], meta: meta(req) });
 });
 
-router.get("/stats", (req: Request, res: Response) => {
-  try {
-    const totalCases = fraudCases.length;
-    const statusCounts = fraudCases.reduce((acc, c) => {
-      acc[c.status] = (acc[c.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+router.get('/stats', (req: Request, res: Response) => {
+  const statusCounts = fraudCases.reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const severityCounts = fraudCases.reduce((acc, c) => { acc[c.severity] = (acc[c.severity] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentCases = fraudCases.filter((c) => new Date(c.reportedAt) > last30Days).length;
 
-    const severityCounts = fraudCases.reduce((acc, c) => {
-      acc[c.severity] = (acc[c.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const last30Days = new Date();
-    last30Days.setDate(last30Days.getDate() - 30);
-
-    const recentCases = fraudCases.filter(c => 
-      new Date(c.reportedAt) > last30Days
-    ).length;
-
-    return res.json({
-      success: true,
-      data: {
-        totalCases,
-        recentCases,
-        statusBreakdown: statusCounts,
-        severityBreakdown: severityCounts,
-        averageCasesPerDay: (recentCases / 30).toFixed(2),
-        resolutionRate: totalCases > 0 ? 
-          (((statusCounts['Resolved'] || 0) + (statusCounts['False Positive'] || 0)) / totalCases * 100).toFixed(2) : 
-          '0.00'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
-  } catch (error) {
-    console.error('Get fraud stats error:', error);
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'STATS_FAILED',
-        message: 'Failed to retrieve fraud statistics'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
-  }
+  return res.json({
+    success: true,
+    data: {
+      totalCases: fraudCases.length,
+      recentCases,
+      statusBreakdown: statusCounts,
+      severityBreakdown: severityCounts,
+      resolutionRate: fraudCases.length > 0
+        ? (((statusCounts['Resolved'] || 0) + (statusCounts['False Positive'] || 0)) / fraudCases.length * 100).toFixed(2)
+        : '0.00',
+    },
+    meta: meta(req),
+  });
 });
 
-router.delete("/cases/:id", (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const caseIndex = fraudCases.findIndex(c => c.id === id);
-    if (caseIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'CASE_NOT_FOUND',
-          message: 'Fraud case not found'
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: req.headers['x-request-id'] as string || uuidv4(),
-          version: 'v1'
-        }
-      });
-    }
-
-    const deletedCase = fraudCases.splice(caseIndex, 1)[0];
-
-    return res.json({
-      success: true,
-      data: {
-        message: 'Fraud case deleted successfully',
-        deletedCase
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
-    });
-  } catch (error) {
-    console.error('Delete fraud case error:', error);
-    return res.status(500).json({
+router.delete('/cases/:id', (req: Request, res: Response) => {
+  const idx = fraudCases.findIndex((c) => c.id === req.params.id);
+  if (idx === -1) {
+    return res.status(404).json({
       success: false,
-      error: {
-        code: 'DELETE_FAILED',
-        message: 'Failed to delete fraud case'
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] as string || uuidv4(),
-        version: 'v1'
-      }
+      error: { code: 'CASE_NOT_FOUND', message: 'Fraud case not found' },
+      meta: meta(req),
     });
   }
+  const deleted = fraudCases.splice(idx, 1)[0];
+  return res.json({ success: true, data: { message: 'Fraud case deleted', deletedCase: deleted }, meta: meta(req) });
 });
 
 export default router;
