@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ES2020",
+    "types": ["vite/client"],
     "moduleResolution": "Node",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,7 +18,8 @@
   },
   "include": [
     "../server/src/**/*.ts",
+    "src",
     "src/**/*.ts"
-  ],
+, "vite-env.d.ts"  ],
   "exclude": ["node_modules", "dist"]
 }

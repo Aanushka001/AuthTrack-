@@ -12,6 +12,5 @@ requests>=2.31.0
 gunicorn>=21.2.0
 psutil>=5.9.5
 
-# Development and Testing
 pytest>=7.4.0
 pytest-flask>=1.2.0

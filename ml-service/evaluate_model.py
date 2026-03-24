@@ -6,7 +6,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 
 def load_model_components(model_path: str, scaler_path: str):
-    """Load classifier and scaler from disk."""
     with open(model_path, "rb") as f:
         model_data = pickle.load(f)
 
@@ -28,12 +27,13 @@ def main():
 
     data = pd.read_csv(DATA_PATH)
     X = data.drop("label", axis=1).values
-    y = data["label"].values
+    y = np.asarray(data["label"].values, dtype=int)  # ensure proper ndarray type
 
     if scaler is not None:
         X = scaler.transform(X)
 
     y_pred = classifier.predict(X)
+    y_pred = np.asarray(y_pred, dtype=int)  # ensure proper ndarray type
 
     print("Classification Report:\n", classification_report(y, y_pred))
     print("Confusion Matrix:\n", confusion_matrix(y, y_pred))

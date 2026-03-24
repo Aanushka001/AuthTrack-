@@ -34,7 +34,7 @@ ml-service/*.pkl
 *.sln
 *.sw?
 project_structure.txt
-
+ml-service/=*
 __pycache__/
 *.py[cod]
 *.pyo
@@ -42,4 +42,4 @@ __pycache__/
 .mypy_cache/
 *.egg-info/
 dist/
-build/
+build/server/src/types/rate-limit-redis.d.ts
