@@ -9,22 +9,17 @@ env:
   IMAGE_PREFIX: ${{ github.repository_owner }}/authtrack
 
 jobs:
-  build-and-push:
-    name: Build & push Docker images
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build images
+        run: docker-compose build
+
+      - name: Run containers
+        run: docker-compose up -d
 
       - name: Set image tag
         id: tag
