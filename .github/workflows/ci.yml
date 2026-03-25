@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    name: Server — lint & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test -- --coverage --ci
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret
+          FIREBASE_PROJECT_ID: test-project
+          FIREBASE_PRIVATE_KEY: test-key
+          FIREBASE_CLIENT_EMAIL: test@test.com
+          REDIS_URL: redis://localhost:6379
+          ML_SERVICE_URL: http://localhost:5001
+
+  client:
+    name: Client — lint & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:3001/api
+          VITE_WS_URL: ws://localhost:3001
+
+  ml-service:
+    name: ML Service — lint & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: ml-service/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: |
+          pip install flake8
+          flake8 . --max-line-length=120 --exclude=__pycache__,.venv,tests
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short
+        env:
+          FLASK_ENV: testing
+          REQUIRE_AUTH: "false"
+          ML_SERVICE_PORT: "5001"

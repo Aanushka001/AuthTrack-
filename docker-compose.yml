@@ -1,0 +1,67 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ml-service:
+    build:
+      context: ./ml-service
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+      - ML_SERVICE_PORT=5001
+      - REQUIRE_AUTH=false
+    volumes:
+      - ml_models:/app/models
+      - ml_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  server:
+    build:
+      context: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - ML_SERVICE_URL=http://ml-service:5001
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    volumes:
+      - server_logs:/app/logs
+
+  client:
+    build:
+      context: ./client
+      args:
+        - VITE_API_URL=http://localhost:3001/api
+        - VITE_WS_URL=ws://localhost:3001
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+volumes:
+  redis_data:
+  ml_models:
+  ml_logs:
+  server_logs:
