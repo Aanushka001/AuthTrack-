@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
@@ -9,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class ModelTrainer:
-    """Model training with optional hyperparameter optimization."""
 
     def __init__(self, config):
         self.config = config

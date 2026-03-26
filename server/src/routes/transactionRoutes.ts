@@ -1,41 +1,25 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { transactionController } from '../controllers/transactionController';
 import { authMiddleware, adminMiddleware, requireRole } from '../middleware/authMiddleware';
+import { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Health check endpoint
-router.get('/health', (_req, res) => {
+router.get('/health', (_req, res: Response) => {
   res.json({
     success: true,
     service: 'Transaction Service',
     status: 'operational',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
   });
 });
 
-// Transaction analysis endpoint
-router.post(
-  '/analyze',
-  authMiddleware,
-  transactionController.analyzeTransaction
-);
-
-// Get all transactions with filtering
+router.post('/analyze', authMiddleware, transactionController.analyzeTransaction);
 router.get('/', authMiddleware, transactionController.getTransactions);
-
-// Get single transaction by ID
 router.get('/:id', authMiddleware, transactionController.getTransaction);
+router.put('/:id/status', authMiddleware, transactionController.updateTransactionStatus);
 
-// Update transaction status
-router.put(
-  '/:id/status',
-  authMiddleware,
-  transactionController.updateTransactionStatus
-);
-
-// Bulk review transactions - requires admin or reviewer role
 router.post(
   '/bulk-review',
   authMiddleware,
@@ -43,7 +27,6 @@ router.post(
   transactionController.bulkReviewTransactions
 );
 
-// Export transactions - admin only
 router.get(
   '/export/data',
   authMiddleware,
@@ -51,7 +34,6 @@ router.get(
   transactionController.exportTransactions
 );
 
-// Get transaction statistics - admin only
 router.get(
   '/stats/overview',
   authMiddleware,
@@ -59,14 +41,12 @@ router.get(
   transactionController.getTransactionStats
 );
 
-// Get user transaction summary
 router.get(
   '/user/:userId/summary',
   authMiddleware,
   transactionController.getUserTransactionSummary
 );
 
-// Get realtime transaction feed - admin only
 router.get(
   '/feed/realtime',
   authMiddleware,
@@ -74,14 +54,8 @@ router.get(
   transactionController.getRealtimeTransactionFeed
 );
 
-// Search transactions
-router.post(
-  '/search',
-  authMiddleware,
-  transactionController.searchTransactions
-);
+router.post('/search', authMiddleware, transactionController.searchTransactions);
 
-// Flag transaction as suspicious - requires reviewer role
 router.post(
   '/:id/flag',
   authMiddleware,
@@ -89,7 +63,6 @@ router.post(
   transactionController.flagTransaction
 );
 
-// Approve/reject transaction - requires reviewer role
 router.put(
   '/:id/review',
   authMiddleware,
@@ -97,7 +70,6 @@ router.put(
   transactionController.reviewTransaction
 );
 
-// Get transaction patterns - admin only
 router.get(
   '/patterns/analysis',
   authMiddleware,

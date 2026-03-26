@@ -1,8 +1,9 @@
 import os
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
+
 import numpy as np
 import pandas as pd
 from flask import Flask, jsonify, request
@@ -14,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score
+    f1_score, roc_auc_score,
 )
 import joblib
 
@@ -24,15 +25,11 @@ class Config:
     FRAUD_MODEL = os.path.join(MODEL_PATH, "fraud_model.pkl")
     ANOMALY_PATH = os.path.join(MODEL_PATH, "anomaly_model.pkl")
     SCALER_PATH = os.path.join(MODEL_PATH, "scaler.pkl")
-
     RATE_LIMIT = os.getenv("RATE_LIMIT", "100 per minute")
     PORT = int(os.getenv("ML_SERVICE_PORT", 5001))
     DEBUG = os.getenv("FLASK_ENV", "production") == "development"
-
     FRAUD_THRESHOLD = 0.5
     ANOMALY_THRESHOLD = -0.1
-    MIN_TRAINING_SAMPLES = 1000
-
     API_KEY = os.getenv("ML_API_KEY", "")
     REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
 
@@ -60,6 +57,7 @@ CORS(
 limiter = Limiter(key_func=get_remote_address, default_limits=[Config.RATE_LIMIT])
 limiter.init_app(app)
 
+
 class FraudDetectionModel:
     def __init__(self):
         self.fraud_classifier: Optional[RandomForestClassifier] = None
@@ -78,48 +76,192 @@ class FraudDetectionModel:
         self.model_version = "1.0"
         self.performance_metrics: Dict[str, Any] = {}
 
-    # Placeholder for synthetic data generation
-    def create_synthetic_data(self):
-        X = np.random.rand(1000, len(self.feature_columns))
-        y = np.random.randint(0, 2, 1000)
+    def create_synthetic_data(self, n_samples: int = 10000) -> tuple:
+        logger.info(f"Generating {n_samples} synthetic training samples...")
+        np.random.seed(42)
+        data = {
+            "amount": np.random.lognormal(mean=3, sigma=2, size=n_samples),
+            "hour": np.random.randint(0, 24, n_samples),
+            "day_of_week": np.random.randint(0, 7, n_samples),
+            "merchant_risk_score": np.random.beta(2, 8, n_samples),
+            "user_account_age_days": np.random.exponential(scale=365, size=n_samples),
+            "transaction_velocity_1h": np.random.poisson(lam=2, size=n_samples),
+            "transaction_velocity_24h": np.random.poisson(lam=10, size=n_samples),
+            "avg_transaction_amount": np.random.lognormal(mean=2.5, sigma=1.5, size=n_samples),
+            "location_risk_score": np.random.beta(1, 9, n_samples),
+            "device_risk_score": np.random.beta(1, 4, n_samples),
+            "time_since_last_transaction": np.random.exponential(scale=3600, size=n_samples),
+            "payment_method_risk": np.random.choice([0.1, 0.3, 0.5, 0.7], n_samples),
+            "ip_reputation_score": np.random.beta(8, 2, n_samples),
+            "behavioral_anomaly_score": np.random.beta(1, 9, n_samples),
+            "cross_border_transaction": np.random.choice([0, 1], n_samples, p=[0.85, 0.15]),
+        }
+        df = pd.DataFrame(data)
+        fraud_probability = np.minimum(
+            0.05
+            + 0.3 * (df["amount"] > df["amount"].quantile(0.95))
+            + 0.2 * (df["merchant_risk_score"] > 0.7)
+            + 0.15 * (df["location_risk_score"] > 0.8)
+            + 0.1 * (df["transaction_velocity_1h"] > 5)
+            + 0.25 * (df["behavioral_anomaly_score"] > 0.8)
+            + 0.1 * df["cross_border_transaction"],
+            0.95,
+        )
+        y = np.random.binomial(1, fraud_probability)
+        X = df[self.feature_columns].values
+        logger.info(f"Generated {len(X)} samples, {np.sum(y)} fraudulent ({np.mean(y)*100:.1f}%)")
         return X, y
 
-    # Check if models are loaded
-    def is_loaded(self) -> bool:
-        return self.fraud_classifier is not None and self.anomaly_detector is not None
-
-    # Placeholder for loading models from disk
-    def load_models(self) -> bool:
-        # TODO: implement joblib loading if files exist
-        return False
-
     def train(self, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None) -> Dict[str, Any]:
-        if X is None or y is None:
-            X, y = self.create_synthetic_data()
-        self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
-        self.fraud_classifier = RandomForestClassifier(n_estimators=100, max_depth=10)
-        self.fraud_classifier.fit(X_scaled, y)
-        self.anomaly_detector = IsolationForest(n_estimators=100)
-        self.anomaly_detector.fit(X_scaled)
-        self.last_training = datetime.now()
-        self.performance_metrics = {"accuracy": 0.95}  # placeholder
-        return {"status": "success", "metrics": self.performance_metrics}
+        logger.info("Starting model training...")
+        try:
+            if X is None or y is None:
+                X, y = self.create_synthetic_data()
+            assert X is not None and y is not None
+
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42, stratify=y
+            )
+            self.scaler = StandardScaler()
+            X_train_scaled = self.scaler.fit_transform(X_train)
+            X_test_scaled = self.scaler.transform(X_test)
+
+            self.fraud_classifier = RandomForestClassifier(
+                n_estimators=100, max_depth=10, min_samples_split=5,
+                min_samples_leaf=2, random_state=42, class_weight="balanced"
+            )
+            self.fraud_classifier.fit(X_train_scaled, y_train)
+
+            self.anomaly_detector = IsolationForest(
+                contamination=0.1, random_state=42, n_estimators=100
+            )
+            self.anomaly_detector.fit(X_train_scaled)
+
+            y_pred = self.fraud_classifier.predict(X_test_scaled)
+            y_pred_proba = self.fraud_classifier.predict_proba(X_test_scaled)[:, 1]
+            anomaly_pred = self.anomaly_detector.predict(X_test_scaled)
+
+            self.performance_metrics = {
+                "accuracy": float(accuracy_score(y_test, y_pred)),
+                "precision": float(precision_score(y_test, y_pred, zero_division=0)),
+                "recall": float(recall_score(y_test, y_pred, zero_division=0)),
+                "f1_score": float(f1_score(y_test, y_pred, zero_division=0)),
+                "roc_auc": float(roc_auc_score(y_test, y_pred_proba)),
+                "fraud_detection_rate": (
+                    float(np.sum(y_pred[y_test == 1]) / np.sum(y_test))
+                    if np.sum(y_test) > 0 else 0.0
+                ),
+                "false_positive_rate": (
+                    float(np.sum(y_pred[y_test == 0]) / np.sum(y_test == 0))
+                    if np.sum(y_test == 0) > 0 else 0.0
+                ),
+                "anomaly_detection_rate": float(np.sum(anomaly_pred == -1) / len(anomaly_pred)),
+                "training_samples": int(len(X_train)),
+                "test_samples": int(len(X_test)),
+                "fraud_percentage": float(np.mean(y) * 100),
+            }
+            self._save_models()
+            self.last_training = datetime.now(timezone.utc)
+            logger.info(f"Training complete. Accuracy: {self.performance_metrics['accuracy']:.3f}")
+            return {
+                "status": "success",
+                "metrics": self.performance_metrics,
+                "model_version": self.model_version,
+                "trained_at": self.last_training.isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Training failed: {str(e)}\n{traceback.format_exc()}")
+            return {"status": "error", "message": str(e)}
 
     def predict(self, features: List[float]) -> Dict[str, Any]:
+        if not self.is_loaded():
+            raise ValueError("Models not loaded. Please train first.")
+        assert self.scaler is not None
+        assert self.fraud_classifier is not None
+        assert self.anomaly_detector is not None
+
         X = np.array(features).reshape(1, -1)
-        X_scaled = self.scaler.transform(X) if self.scaler else X
-        fraud_prob = float(self.fraud_classifier.predict_proba(X_scaled)[0, 1]) if self.fraud_classifier else 0.0
-        fraud_prediction = int(fraud_prob > 0.5)
-        anomaly_score = float(self.anomaly_detector.decision_function(X_scaled)[0]) if self.anomaly_detector else 0.0
-        feature_importance = self.fraud_classifier.feature_importances_ if self.fraud_classifier else np.zeros(len(self.feature_columns))
+        if X.shape[1] != len(self.feature_columns):
+            raise ValueError(
+                f"Expected {len(self.feature_columns)} features, got {X.shape[1]}"
+            )
+
+        X_scaled = self.scaler.transform(X)
+        fraud_prob = float(self.fraud_classifier.predict_proba(X_scaled)[0, 1])
+        fraud_prediction = int(fraud_prob > Config.FRAUD_THRESHOLD)
+        anomaly_score = float(self.anomaly_detector.decision_function(X_scaled)[0])
+        anomaly_prediction = int(anomaly_score < Config.ANOMALY_THRESHOLD)
+
+        feature_importance = self.fraud_classifier.feature_importances_
+        top_features = sorted(
+            zip(self.feature_columns, feature_importance, features),
+            key=lambda x: x[1], reverse=True,
+        )[:5]
+
+        if fraud_prob >= 0.8:
+            risk_level = "CRITICAL"
+        elif fraud_prob >= 0.6:
+            risk_level = "HIGH"
+        elif fraud_prob >= 0.4:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+
         return {
             "fraud_probability": fraud_prob,
             "fraud_prediction": fraud_prediction,
+            "prediction": "fraud" if fraud_prediction == 1 else "legitimate",
             "anomaly_score": anomaly_score,
-            "feature_importance": dict(zip(self.feature_columns, feature_importance)),
-            "timestamp": datetime.utcnow().isoformat(),
+            "anomaly_prediction": anomaly_prediction,
+            "risk_level": risk_level,
+            "confidence": float(max(fraud_prob, 1 - fraud_prob)),
+            "model_version": self.model_version,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "explanation": {
+                "top_risk_factors": [
+                    {"feature": f, "importance": float(i), "value": float(v)}
+                    for f, i, v in top_features
+                ],
+                "risk_factors": [f"{f}: {v:.2f}" for f, _, v in top_features[:3]],
+                "feature_importance": dict(
+                    zip(self.feature_columns, [float(x) for x in feature_importance])
+                ),
+            },
         }
+
+    def is_loaded(self) -> bool:
+        return (
+            self.fraud_classifier is not None
+            and self.anomaly_detector is not None
+            and self.scaler is not None
+        )
+
+    def _save_models(self):
+        try:
+            joblib.dump(self.fraud_classifier, Config.FRAUD_MODEL)
+            joblib.dump(self.anomaly_detector, Config.ANOMALY_PATH)
+            joblib.dump(self.scaler, Config.SCALER_PATH)
+            logger.info("Models saved successfully")
+        except Exception as e:
+            logger.error(f"Failed to save models: {e}")
+
+    def load_models(self) -> bool:
+        try:
+            if (
+                os.path.exists(Config.FRAUD_MODEL)
+                and os.path.exists(Config.ANOMALY_PATH)
+                and os.path.exists(Config.SCALER_PATH)
+            ):
+                self.fraud_classifier = joblib.load(Config.FRAUD_MODEL)
+                self.anomaly_detector = joblib.load(Config.ANOMALY_PATH)
+                self.scaler = joblib.load(Config.SCALER_PATH)
+                logger.info("Models loaded from disk")
+                return True
+            logger.warning("Model files not found")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to load models: {e}")
+            return False
 
 
 model = FraudDetectionModel()
@@ -150,7 +292,8 @@ def root():
         "status": "running",
         "endpoints": [
             "GET  /health", "POST /train", "POST /predict",
-            "POST /analyze", "GET  /model/status", "POST /model/retrain", "POST /retrain",
+            "POST /analyze", "GET  /model/status",
+            "POST /model/retrain", "POST /retrain",
         ],
     })
 
@@ -163,7 +306,7 @@ def health():
         "version": model.model_version,
         "model_status": "loaded" if model.is_loaded() else "not_loaded",
         "last_training": model.last_training.isoformat() if model.last_training else None,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
 
 
@@ -199,7 +342,9 @@ def predict_fraud():
     try:
         result = model.predict(features)
         if not data.get("include_explanation", True):
-            result = {k: result[k] for k in ("fraud_probability", "fraud_prediction", "risk_level", "timestamp")}
+            result = {k: result[k] for k in (
+                "fraud_probability", "fraud_prediction", "risk_level", "timestamp"
+            )}
         return jsonify(result)
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
@@ -261,9 +406,11 @@ def retrain_model():
 def not_found(_):
     return jsonify({"error": "Endpoint not found"}), 404
 
+
 @app.errorhandler(500)
 def internal_error(_):
     return jsonify({"error": "Internal server error"}), 500
+
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
@@ -272,7 +419,6 @@ def ratelimit_handler(e):
 
 if __name__ == "__main__":
     logger.info("Starting SecureTrace ML Service...")
-
     if not model.load_models():
         logger.info("No existing models — training on startup...")
         result = model.train()
@@ -280,6 +426,5 @@ if __name__ == "__main__":
             logger.info("Initial training complete")
         else:
             logger.error("Initial training failed — will train on first request")
-
     logger.info(f"Port: {Config.PORT} | Auth required: {Config.REQUIRE_AUTH}")
     app.run(host="0.0.0.0", port=Config.PORT, debug=Config.DEBUG)

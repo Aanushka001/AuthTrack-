@@ -89,9 +89,12 @@ export class RiskAssessmentService {
       .get();
 
     return {
-      transactions: snapshot.docs.map(doc => doc.data()),
+      transactions: snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.data()),
       count: snapshot.size,
-      totalAmount: snapshot.docs.reduce((sum, doc) => sum + parseFloat(doc.data().amount), 0)
+     totalAmount: snapshot.docs.reduce(
+  (sum: number, doc: FirebaseFirestore.QueryDocumentSnapshot) =>
+    sum + parseFloat(doc.data().amount), 0
+)
     };
   }
 
@@ -103,7 +106,7 @@ export class RiskAssessmentService {
       .where('timestamp', '>=', cutoffDate)
       .get();
 
-    return snapshot.docs.map(doc => doc.data() as Transaction);
+    return snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.data() as Transaction);
   }
 
   private assessTransactionRisk(transactionData: any, riskProfile: RiskProfile): number {

@@ -29,7 +29,7 @@ describe('authMiddleware', () => {
   it('calls next(AppError 401) when no token provided', async () => {
     const req = { headers: {} } as Request;
     await authMiddleware(req as any, mockRes(), mockNext);
-    const err = mockNext.mock.calls[0][0] as AppError;
+    const err = mockNext.mock.calls[0][0] as unknown as AppError;
     expect(err).toBeInstanceOf(AppError);
     expect(err.statusCode).toBe(401);
     expect(err.message).toBe('No token provided');
@@ -66,7 +66,7 @@ describe('requireRole', () => {
     const req = { user: undefined } as any;
     const middleware = requireRole(['admin']);
     await middleware(req, mockRes(), mockNext);
-    const err = mockNext.mock.calls[0][0] as AppError;
+    const err = mockNext.mock.calls[0][0] as unknown as AppError;
     expect(err).toBeInstanceOf(AppError);
     expect(err.statusCode).toBe(401);
   });
@@ -82,7 +82,7 @@ describe('requireRole', () => {
     const req = { user: { uid: 'u1', email: 'x@y.com' }, app: { get: jest.fn().mockReturnValue(mockDb) } } as any;
     const middleware = requireRole(['admin']);
     await middleware(req, mockRes(), mockNext);
-    const err = mockNext.mock.calls[0][0] as AppError;
+    const err = mockNext.mock.calls[0][0] as unknown as AppError;
     expect(err).toBeInstanceOf(AppError);
     expect(err.statusCode).toBe(403);
   });

@@ -1,0 +1,12 @@
+[flake8]
+max-line-length = 120
+exclude =
+    __pycache__,
+    .venv,
+    venv,
+    tests,
+    node_modules,
+    .git
+per-file-ignores =
+    models/fraud_model.py:W291,W292,W293
+    data/preprocessor.py:W291,W292,W293
