@@ -2,7 +2,6 @@ import request from 'supertest';
 import express from 'express';
 import { errorHandler } from '../middleware/errorMiddleware';
 
-// Mock auth so all routes are accessible
 jest.mock('../config/firebase', () => ({
   auth: {
     verifyIdToken: jest.fn().mockResolvedValue({ uid: 'test-uid', email: 'test@test.com' }),
@@ -29,18 +28,6 @@ jest.mock('../config/database', () => ({
   },
 }));
 
-jest.mock('../services/FraudAnalysisService', () => ({
-  FraudAnalysisService: jest.fn().mockImplementation(() => ({
-    analyzeTransaction: jest.fn().mockResolvedValue({
-      riskScore: 0.2,
-      fraudPrediction: false,
-      confidence: 0.8,
-      features: {},
-      alerts: [],
-    }),
-  })),
-}));
-// Create a shared mock function for analyzeTransaction
 const mockAnalyzeTransaction = jest.fn().mockResolvedValue({
   riskScore: 0.2,
   fraudPrediction: false,
@@ -49,12 +36,12 @@ const mockAnalyzeTransaction = jest.fn().mockResolvedValue({
   alerts: [],
 });
 
-// Use it in the mock
 jest.mock('../services/FraudAnalysisService', () => ({
   FraudAnalysisService: jest.fn().mockImplementation(() => ({
     analyzeTransaction: mockAnalyzeTransaction,
   })),
 }));
+
 jest.mock('../services/RiskAssessmentService', () => ({
   RiskAssessmentService: jest.fn().mockImplementation(() => ({
     updateUserRiskLevel: jest.fn().mockResolvedValue({}),
@@ -73,6 +60,7 @@ jest.mock('../utils/deviceFingerprint', () => ({
 }));
 
 import transactionRoutes from '../routes/transactionRoutes';
+
 const app = express();
 app.use(express.json());
 app.use('/api/transactions', transactionRoutes);
@@ -110,6 +98,14 @@ describe('GET /api/transactions', () => {
 
 describe('POST /api/transactions/analyze', () => {
   it('returns risk score and fraud prediction', async () => {
+    mockAnalyzeTransaction.mockResolvedValueOnce({
+      riskScore: 0.2,
+      fraudPrediction: false,
+      confidence: 0.8,
+      features: {},
+      alerts: [],
+    });
+
     const res = await request(app)
       .post('/api/transactions/analyze')
       .set('Authorization', 'Bearer mock-token')
@@ -127,16 +123,13 @@ describe('POST /api/transactions/analyze', () => {
   });
 
   it('declines transaction when risk score > 0.7', async () => {
-    const { FraudAnalysisService } = require('../services/FraudAnalysisService');
-    FraudAnalysisService.mockImplementationOnce(() => ({
-      analyzeTransaction: jest.fn().mockResolvedValue({
-        riskScore: 0.85,
-        fraudPrediction: true,
-        confidence: 0.9,
-        features: {},
-        alerts: [],
-      }),
-    }));
+    mockAnalyzeTransaction.mockResolvedValueOnce({
+      riskScore: 0.85,
+      fraudPrediction: true,
+      confidence: 0.9,
+      features: {},
+      alerts: [],
+    });
 
     const res = await request(app)
       .post('/api/transactions/analyze')
