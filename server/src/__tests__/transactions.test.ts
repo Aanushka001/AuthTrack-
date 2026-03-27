@@ -40,7 +40,21 @@ jest.mock('../services/FraudAnalysisService', () => ({
     }),
   })),
 }));
+// Create a shared mock function for analyzeTransaction
+const mockAnalyzeTransaction = jest.fn().mockResolvedValue({
+  riskScore: 0.2,
+  fraudPrediction: false,
+  confidence: 0.8,
+  features: {},
+  alerts: [],
+});
 
+// Use it in the mock
+jest.mock('../services/FraudAnalysisService', () => ({
+  FraudAnalysisService: jest.fn().mockImplementation(() => ({
+    analyzeTransaction: mockAnalyzeTransaction,
+  })),
+}));
 jest.mock('../services/RiskAssessmentService', () => ({
   RiskAssessmentService: jest.fn().mockImplementation(() => ({
     updateUserRiskLevel: jest.fn().mockResolvedValue({}),

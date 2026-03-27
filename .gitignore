@@ -51,3 +51,4 @@ ml-service/fraud_model.pkl
 ml-service/scaler.pkl
 models/
 logs/
+server/coverage/
