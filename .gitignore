@@ -43,3 +43,11 @@ __pycache__/
 *.egg-info/
 dist/
 build/server/src/types/rate-limit-redis.d.ts
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+ml-service/fraud_model.pkl
+ml-service/scaler.pkl
+models/
+logs/

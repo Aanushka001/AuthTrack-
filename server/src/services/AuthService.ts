@@ -23,26 +23,31 @@ export class AuthService {
       const deviceFingerprint = generateDeviceFingerprint(req);
 
       const user: User = {
-        id: userRecord.uid,
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        role: 'user',
-        isActive: true,
-        riskLevel: 'low',
-        createdAt: new Date(),
-        lastLoginAt: new Date(),
-        behaviorBaseline: {
-          typingSpeed: 0,
-          mousePressure: 0,
-          sessionDuration: 0,
-          transactionFrequency: 0,
-          preferredMerchants: [],
-          typicalLocations: [],
-        },
-        linkedDevices: [deviceFingerprint],
-        complianceStatus: 'compliant',
-      };
+  id: userRecord.uid,
+  email: userData.email,
+  firstName: userData.firstName,
+  lastName: userData.lastName,
+
+  role: 'user',
+
+  isActive: true,
+  riskLevel: 'low',
+
+  createdAt: new Date(),
+  lastLoginAt: new Date(),
+
+  behaviorBaseline: {
+    typingSpeed: 0,
+    mousePressure: 0,
+    sessionDuration: 0,
+    transactionFrequency: 0,
+    preferredMerchants: [],
+    typicalLocations: [],
+  },
+
+  linkedDevices: [deviceFingerprint],
+  complianceStatus: 'compliant',
+};
 
       await db.collection('users').doc(userRecord.uid).set(user);
       await this.createInitialRiskProfile(userRecord.uid);

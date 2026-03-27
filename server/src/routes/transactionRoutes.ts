@@ -1,7 +1,6 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response } from 'express';
 import { transactionController } from '../controllers/transactionController';
 import { authMiddleware, adminMiddleware, requireRole } from '../middleware/authMiddleware';
-import { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
