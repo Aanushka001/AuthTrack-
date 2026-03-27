@@ -1,7 +1,25 @@
-FROM node:20-alpine3.19
+FROM node:22-alpine AS builder
 WORKDIR /app
+RUN apk update && apk upgrade --no-cache
+
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
+
 COPY . .
-EXPOSE 5000
-CMD ["node", "dist/index.js"]
+RUN npx tsc
+
+FROM node:22-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk update && apk upgrade --no-cache
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+EXPOSE 3001
+CMD ["node", "dist/server.js"]

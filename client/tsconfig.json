@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
+    "jsx": "react-jsx",
     "module": "ES2020",
     "types": ["vite/client"],
     "moduleResolution": "Node",
@@ -16,10 +17,6 @@
       "@components/*": ["components/*"]
     }
   },
-  "include": [
-    "../server/src/**/*.ts",
-    "src",
-    "src/**/*.ts"
-, "vite-env.d.ts"  ],
+  "include": ["src", "vite-env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

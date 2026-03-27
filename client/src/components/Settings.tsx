@@ -31,6 +31,8 @@ interface SystemSettings {
   };
 }
 
+type SettingsCategory = keyof SystemSettings;
+
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>({
     fraud_detection: {
@@ -45,7 +47,7 @@ export default function Settings() {
       sms_notifications: false,
       webhook_notifications: true,
       alert_frequency: 'immediate',
-      notification_emails: ['admin@company.com', 'fraud-team@company.com'],
+      notification_emails: ['admin@company.com'],
     },
     security: {
       session_timeout: 30,
@@ -62,25 +64,18 @@ export default function Settings() {
     },
   });
 
-  const [activeTab, setActiveTab] = useState('fraud_detection');
+  const [activeTab, setActiveTab] = useState<SettingsCategory>('fraud_detection');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch {
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const updateSetting = (category: keyof SystemSettings, key: string, value: any) => {
+  const updateSetting = <
+    C extends SettingsCategory,
+    K extends keyof SystemSettings[C]
+  >(
+    category: C,
+    key: K,
+    value: SystemSettings[C][K]
+  ) => {
     setSettings((prev) => ({
       ...prev,
       [category]: {
@@ -90,27 +85,22 @@ export default function Settings() {
     }));
   };
 
-  const addEmail = () => {
-    const email = prompt('Enter email address:');
-    if (email && email.includes('@')) {
-      updateSetting('alerts', 'notification_emails', [
-        ...settings.alerts.notification_emails,
-        email,
-      ]);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      setSaveStatus('success');
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
-  const removeEmail = (email: string) => {
-    updateSetting(
-      'alerts',
-      'notification_emails',
-      settings.alerts.notification_emails.filter((e) => e !== email)
-    );
-  };
-
-  const tabs = [
+  const tabs: { id: SettingsCategory; label: string; icon: React.ElementType }[] = [
     { id: 'fraud_detection', label: 'Fraud Detection', icon: Shield },
-    { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },
+    { id: 'alerts', label: 'Alerts', icon: Bell },
     { id: 'security', label: 'Security', icon: Key },
     { id: 'integration', label: 'Integration', icon: Globe },
   ];
@@ -120,83 +110,77 @@ export default function Settings() {
       case 'fraud_detection':
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Fraud Detection Settings</h3>
+            <h3 className="text-lg font-medium">Fraud Detection Settings</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Risk Threshold */}
-              <div>
-                <label htmlFor="risk-threshold" className="block text-sm font-medium text-gray-700 mb-2">
-                  Risk Threshold
-                </label>
-                <input
-                  id="risk-threshold"
-                  title="Risk Threshold Slider"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={settings.fraud_detection.risk_threshold}
-                  onChange={(e) =>
-                    updateSetting('fraud_detection', 'risk_threshold', parseFloat(e.target.value))
-                  }
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-600 mt-1">
-                  <span>Low (0)</span>
-                  <span>
-                    Current: {(settings.fraud_detection.risk_threshold * 100).toFixed(0)}%
-                  </span>
-                  <span>High (100)</span>
-                </div>
+            {/* Risk Threshold */}
+            <div>
+              <label htmlFor="risk-threshold" className="block text-sm font-medium mb-2">
+                Risk Threshold
+              </label>
+              <input
+                id="risk-threshold"
+                aria-label="Risk Threshold"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={settings.fraud_detection.risk_threshold}
+                onChange={(e) =>
+                  updateSetting('fraud_detection', 'risk_threshold', parseFloat(e.target.value))
+                }
+                className="w-full"
+              />
+              <div className="text-sm mt-1">
+                {(settings.fraud_detection.risk_threshold * 100).toFixed(0)}%
               </div>
+            </div>
 
-              {/* Auto-Block Threshold */}
-              <div>
-                <label htmlFor="auto-block-threshold" className="block text-sm font-medium text-gray-700 mb-2">
-                  Auto-Block Threshold
-                </label>
-                <input
-                  id="auto-block-threshold"
-                  title="Auto Block Threshold Slider"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={settings.fraud_detection.auto_block_threshold}
-                  onChange={(e) =>
-                    updateSetting(
-                      'fraud_detection',
-                      'auto_block_threshold',
-                      parseFloat(e.target.value)
-                    )
-                  }
-                  className="w-full"
-                />
-              </div>
+            {/* Auto Block */}
+            <div>
+              <label htmlFor="auto-block" className="block text-sm font-medium mb-2">
+                Auto-Block Threshold
+              </label>
+              <input
+                id="auto-block"
+                aria-label="Auto Block Threshold"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={settings.fraud_detection.auto_block_threshold}
+                onChange={(e) =>
+                  updateSetting(
+                    'fraud_detection',
+                    'auto_block_threshold',
+                    parseFloat(e.target.value)
+                  )
+                }
+                className="w-full"
+              />
+            </div>
 
-              {/* ML Model Sensitivity */}
-              <div>
-                <label htmlFor="ml-sensitivity" className="block text-sm font-medium text-gray-700 mb-2">
-                  ML Model Sensitivity
-                </label>
-                <input
-                  id="ml-sensitivity"
-                  title="Machine Learning Model Sensitivity"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={settings.fraud_detection.ml_model_sensitivity}
-                  onChange={(e) =>
-                    updateSetting(
-                      'fraud_detection',
-                      'ml_model_sensitivity',
-                      parseFloat(e.target.value)
-                    )
-                  }
-                  className="w-full"
-                />
-              </div>
+            {/* ML Sensitivity */}
+            <div>
+              <label htmlFor="ml-sensitivity" className="block text-sm font-medium mb-2">
+                ML Model Sensitivity
+              </label>
+              <input
+                id="ml-sensitivity"
+                aria-label="ML Model Sensitivity"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={settings.fraud_detection.ml_model_sensitivity}
+                onChange={(e) =>
+                  updateSetting(
+                    'fraud_detection',
+                    'ml_model_sensitivity',
+                    parseFloat(e.target.value)
+                  )
+                }
+                className="w-full"
+              />
             </div>
           </div>
         );
@@ -204,20 +188,24 @@ export default function Settings() {
       case 'alerts':
         return (
           <div>
-            <h3>Alerts & Notifications</h3>
-            <label htmlFor="alert-frequency" className="block text-sm font-medium text-gray-700">
+            <h3 className="text-lg font-medium mb-4">Alerts</h3>
+
+            <label htmlFor="alert-frequency" className="block text-sm font-medium mb-2">
               Alert Frequency
             </label>
             <select
               id="alert-frequency"
-              title="Alert Frequency Selector"
+              aria-label="Alert Frequency"
               value={settings.alerts.alert_frequency}
-              onChange={(e) => updateSetting('alerts', 'alert_frequency', e.target.value)}
+              onChange={(e) =>
+                updateSetting('alerts', 'alert_frequency', e.target.value)
+              }
+              className="border p-2 rounded w-full"
             >
               <option value="immediate">Immediate</option>
-              <option value="hourly">Hourly Digest</option>
-              <option value="daily">Daily Digest</option>
-              <option value="weekly">Weekly Summary</option>
+              <option value="hourly">Hourly</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
             </select>
           </div>
         );
@@ -229,46 +217,53 @@ export default function Settings() {
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <div className="flex space-x-4 border-b border-gray-200 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-4 py-2 border-b-2 ${
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="flex space-x-4 border-b mb-6">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-2 px-4 py-2 border-b-2 ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <TabContent />
 
+      {/* Actions */}
       <div className="mt-8 flex justify-end space-x-3">
         <button
-          onClick={() => setSettings(settings)}
-          className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+          onClick={() => window.location.reload()}
+          className="flex items-center px-4 py-2 bg-gray-200 rounded-lg"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Reset
         </button>
+
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
         >
           <Save className="w-4 h-4 mr-2" />
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
+
         {saveStatus === 'success' && (
-          <span className="text-green-600 text-sm self-center">Settings saved!</span>
+          <span className="text-green-600 self-center">Saved!</span>
         )}
         {saveStatus === 'error' && (
-          <span className="text-red-600 text-sm self-center">Failed to save.</span>
+          <span className="text-red-600 self-center">Error saving</span>
         )}
       </div>
     </div>

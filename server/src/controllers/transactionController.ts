@@ -110,7 +110,12 @@ export class TransactionController {
       const total = transactions.length;
       const startIndex = (page - 1) * limit;
       const paginatedTransactions = transactions
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .sort((a, b) => {
+  const getTime = (t: Date | FirebaseFirestore.Timestamp) =>
+    t instanceof Date ? t.getTime() : t.toDate().getTime();
+
+  return getTime(b.timestamp) - getTime(a.timestamp);
+})
         .slice(startIndex, startIndex + limit);
 
       sendPaginated(res, paginatedTransactions, page, limit, total);

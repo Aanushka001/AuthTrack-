@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, Clock, X, Filter, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, X, Search } from 'lucide-react';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 
 interface Alert {
@@ -88,7 +88,7 @@ export default function Alerts() {
   }, [realTimeData?.alerts]);
 
   useEffect(() => {
-    let filtered = alerts.filter(alert => {
+    const filtered = alerts.filter(alert => {
       const matchesSearch = alert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            alert.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            alert.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||

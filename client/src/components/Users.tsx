@@ -16,7 +16,7 @@ interface UserData {
 }
 
 export default function Users() {
-  const [users, setUsers] = useState<UserData[]>([
+  const [users] = useState<UserData[]>([
     {
       id: 'user_12345',
       name: 'John Doe',
