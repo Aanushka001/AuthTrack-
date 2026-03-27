@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS production
+FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -8,14 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p logs models && \
-    addgroup --system appgroup && \
-    adduser --system --home /app --ingroup appgroup appuser && \
-    chown -R appuser:appgroup /app && \
-    chmod 755 logs
-
-USER appuser
-ENV HOME=/app
+RUN mkdir -p logs models
 
 EXPOSE 5001
 CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "--timeout", "120", "app:app"]
