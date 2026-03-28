@@ -20,9 +20,9 @@ services:
       - FLASK_ENV=development
       - ML_SERVICE_PORT=5001
       - REQUIRE_AUTH=false
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ml_models:/app/models
-      - ml_logs:/app/logs
+      - ml_models:/app/models          # persist models, but not logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
@@ -63,5 +63,4 @@ services:
 volumes:
   redis_data:
   ml_models:
-  ml_logs:
   server_logs:
