@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches: [main]
@@ -19,10 +18,17 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install -r requirements.txt
-      - run: pip install pytest
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - run: pytest
+      - name: Install linting tools
+        run: pip install flake8 pytest
+
+      - name: Lint
+        run: flake8 . --max-line-length=120 --exclude=__pycache__,.venv,tests,venv,node_modules
+
+      - name: Run tests
+        run: pytest
 
   test-server:
     runs-on: ubuntu-latest
@@ -37,8 +43,11 @@ jobs:
         with:
           node-version: "20"
 
-      - run: npm ci
-      - run: npm run test
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
   docker-build:
     runs-on: ubuntu-latest
@@ -55,5 +64,3 @@ jobs:
 
       - name: Build Client image
         run: docker build -t client ./client
-      - name: Lint
-        run: python -m flake8 . --max-line-length=120 --exclude=__pycache__,.venv,tests,venv,node_modules
